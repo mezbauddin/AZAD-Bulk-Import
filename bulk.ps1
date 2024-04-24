@@ -41,12 +41,23 @@ if ($tenantDetail) {
         $batchUsers = $users[$startIdx..$endIdx]
         foreach ($user in $batchUsers) {
             $email = $user.'Current Work Email'
+            $firstName = $user.'First name'
+            $lastName = $user.'Last name'
+
             if (-not ([string]::IsNullOrWhiteSpace($email)) -and $email -match '\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b') {
-                $invitation = New-AzureADMSInvitation -InvitedUserEmailAddress $email -InviteRedirectUrl "https://myapps.microsoft.com" -SendInvitationMessage $false -InvitedUserDisplayName "$($user.'First Name') $($user.'Last Name')" -InvitedUserType Guest
+                $invitation = New-AzureADMSInvitation -InvitedUserEmailAddress $email -InviteRedirectUrl "https://myapps.microsoft.com" -SendInvitationMessage $false -InvitedUserDisplayName "$firstName $lastName" -InvitedUserType Guest
 
                 if ($invitation) {
-                    Write-Output "Invitation sent to $email for $($user.'First Name') $($user.'Last Name')."
+                    Write-Output "Invitation sent to $email for $firstName $lastName."
                     $userObjectId = $invitation.InvitedUser.Id
+
+                    # Update user properties
+                    $userParams = @{
+                        GivenName = $firstName
+                        Surname = $lastName
+                    }
+
+                    Set-AzureADUser -ObjectId $userObjectId @userParams
 
                     # Add user to the specified groups
                     for ($j = 1; $j -le 2; $j++) {
@@ -57,15 +68,15 @@ if ($tenantDetail) {
                                 Add-AzureADGroupMember -ObjectId $group.ObjectId -RefObjectId $userObjectId
                                 Write-Output "User added to group $groupName."
                             } else {
-                                Write-Output "Failed to find group $groupName for user $($user.'First Name') $($user.'Last Name')."
+                                Write-Output "Failed to find group $groupName for user $firstName $lastName."
                             }
                         }
                     }
                 } else {
-                    Write-Output "Failed to send invitation to $email for $($user.'First Name') $($user.'Last Name')."
+                    Write-Output "Failed to send invitation to $email for $firstName $lastName."
                 }
             } else {
-                Write-Output "Invalid email address provided for user $($user.'First Name') $($user.'Last Name')."
+                Write-Output "Invalid email address provided for user $firstName $lastName."
             }
         }
         
