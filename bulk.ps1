@@ -13,7 +13,7 @@ Connect-AzureAD
 # Get Azure AD tenant details
 $tenantDetail = Get-AzureADTenantDetail
 
-if ($tenantDetail -ne $null) {
+if ($tenantDetail) {
     $tenantId = $tenantDetail.ObjectId
     Write-Output "Azure AD Tenant ID: $tenantId"
 
@@ -40,39 +40,32 @@ if ($tenantDetail -ne $null) {
         # Process current batch of users
         $batchUsers = $users[$startIdx..$endIdx]
         foreach ($user in $batchUsers) {
-            $password = ConvertTo-SecureString -String $user.Password -AsPlainText -Force
+            $email = $user.'Current Work Email'
+            if (-not ([string]::IsNullOrWhiteSpace($email)) -and $email -match '\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b') {
+                $invitation = New-AzureADMSInvitation -InvitedUserEmailAddress $email -InviteRedirectUrl "https://myapps.microsoft.com" -SendInvitationMessage $false -InvitedUserDisplayName "$($user.'First Name') $($user.'Last Name')" -InvitedUserType Guest
 
-            # Check if user already exists
-            $existingUser = Get-AzureADUser -Filter "UserPrincipalName eq '$($user.'Current Work Email')'"
-            if ($existingUser -eq $null) {
-                # Invite user as an external guest
-                $displayName = "$($user.'First Name') $($user.'Last Name') - $($user.'Position Code') at $($user.'Co Name') in $($user.'Co City')"
-                $invitation = New-AzureADMSInvitation -InvitedUserEmailAddress $user.'Current Work Email' -InviteRedirectUrl "https://myapps.microsoft.com" -SendInvitationMessage $false -InvitedUserDisplayName $displayName -InvitedUserType Guest
+                if ($invitation) {
+                    Write-Output "Invitation sent to $email for $($user.'First Name') $($user.'Last Name')."
+                    $userObjectId = $invitation.InvitedUser.Id
 
-                if ($invitation -ne $null) {
-                    Write-Output "Invitation sent to $($user.'Current Work Email') for $($user.'First Name') $($user.'Last Name')."
-                }
-                else {
-                    Write-Output "Failed to send invitation to $($user.'Current Work Email') for $($user.'First Name') $($user.'Last Name')."
-                }
-            }
-            else {
-                Write-Output "User $($user.'Current Work Email') already exists in Azure AD. Skipping invitation."
-            }
-
-            # Add user to security groups
-            for ($j = 1; $j -le 2; $j++) {
-                $groupName = $user."Group $j"
-                if (-not [string]::IsNullOrWhiteSpace($groupName)) {
-                    $group = Get-AzureADGroup -Filter "DisplayName eq '$groupName'"
-                    if ($group -ne $null) {
-                        Add-AzureADGroupMember -ObjectId $group.ObjectId -RefObjectId $invitation.InvitedUser.ObjectId
-                        Write-Output "User $($user.'First Name') $($user.'Last Name') added to group $groupName."
+                    # Add user to the specified groups
+                    for ($j = 1; $j -le 2; $j++) {
+                        $groupName = $user."Group $j"
+                        if (-not [string]::IsNullOrWhiteSpace($groupName)) {
+                            $group = Get-AzureADGroup -Filter "DisplayName eq '$groupName'"
+                            if ($group) {
+                                Add-AzureADGroupMember -ObjectId $group.ObjectId -RefObjectId $userObjectId
+                                Write-Output "User added to group $groupName."
+                            } else {
+                                Write-Output "Failed to find group $groupName for user $($user.'First Name') $($user.'Last Name')."
+                            }
+                        }
                     }
-                    else {
-                        Write-Output "Failed to find group $groupName for user $($user.'First Name') $($user.'Last Name')."
-                    }
+                } else {
+                    Write-Output "Failed to send invitation to $email for $($user.'First Name') $($user.'Last Name')."
                 }
+            } else {
+                Write-Output "Invalid email address provided for user $($user.'First Name') $($user.'Last Name')."
             }
         }
         
@@ -85,7 +78,6 @@ if ($tenantDetail -ne $null) {
             Start-Sleep -Seconds $waitTime
         }
     }
-}
-else {
+} else {
     Write-Output "Failed to retrieve Azure AD tenant details."
 }
