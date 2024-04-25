@@ -24,40 +24,94 @@ if ($tenantDetail) {
     # Get the directory of the script
     $scriptDirectory = Split-Path -Parent $MyInvocation.MyCommand.Path
 
-    # Read CSV and create users
+    # Read CSV and process users
     $users = Import-Csv -Path (Join-Path -Path $scriptDirectory -ChildPath "users.csv")
 
-    # Calculate number of batches
-    $totalUsers = $users.Count
-    $totalBatches = [math]::Ceiling($totalUsers / $batchSize)
+    # Loop through users
+    foreach ($user in $users) {
+        $email = $user.'Email'
+        $firstName = $user.'First name'
+        $lastName = $user.'Last name'
+        $companyName = $user.'Company Name'
+        $city = $user.'City'
 
-    # Loop through batches
-    for ($i = 0; $i -lt $totalBatches; $i++) {
-        # Get current batch range
-        $startIdx = $i * $batchSize
-        $endIdx = [math]::Min(($startIdx + $batchSize - 1), ($totalUsers - 1))
-        
-        # Process current batch of users
-        $batchUsers = $users[$startIdx..$endIdx]
-        foreach ($user in $batchUsers) {
-            $email = $user.'Current Work Email'
-            $firstName = $user.'First name'
-            $lastName = $user.'Last name'
+        # Check if email is provided and is in a valid format
+        if (-not ([string]::IsNullOrWhiteSpace($email)) -and $email -match '\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b') {
+            # Check if user already exists in Azure AD
+            $existingUser = Get-AzureADUser -Filter "UserPrincipalName eq '$email'"
+            if ($existingUser) {
+                Write-Output "User with email $email already exists in Azure AD. Checking for updates..."
 
-            if (-not ([string]::IsNullOrWhiteSpace($email)) -and $email -match '\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b') {
+                # Check for updates in user properties
+                $updateRequired = $false
+                if ($existingUser.GivenName -ne $firstName) {
+                    $existingUser.GivenName = $firstName
+                    $updateRequired = $true
+                }
+                if ($existingUser.Surname -ne $lastName) {
+                    $existingUser.Surname = $lastName
+                    $updateRequired = $true
+                }
+                if ($existingUser.CompanyName -ne $companyName) {
+                    $existingUser.CompanyName = $companyName
+                    $updateRequired = $true
+                }
+                if ($existingUser.City -ne $city) {
+                    $existingUser.City = $city
+                    $updateRequired = $true
+                }
+                if ($updateRequired) {
+                    # Update user properties
+                    Set-AzureADUser -ObjectId $existingUser.ObjectId -GivenName $existingUser.GivenName -Surname $existingUser.Surname -CompanyName $existingUser.CompanyName -City $existingUser.City
+                    Write-Output "User properties updated for $email."
+                } else {
+                    Write-Output "No updates found for user $email."
+                }
+
+                # Add user to the specified groups
+                for ($j = 1; $j -le 2; $j++) {
+                    $groupName = $user."Group $j"
+                    if (-not [string]::IsNullOrWhiteSpace($groupName)) {
+                        $group = Get-AzureADGroup -Filter "DisplayName eq '$groupName'"
+                        if ($group) {
+                            # Check if user is already a member of the group
+                            $groupMembers = Get-AzureADGroupMember -ObjectId $group.ObjectId | Select-Object -ExpandProperty ObjectId
+                            if ($groupMembers -notcontains $existingUser.ObjectId) {
+                                try {
+                                    Add-AzureADGroupMember -ObjectId $group.ObjectId -RefObjectId $existingUser.ObjectId -ErrorAction Stop
+                                    Write-Output "User added to group $groupName."
+                                } catch {
+                                    Write-Output "Failed to add user to group $($groupName): $($_.Exception.Message)"
+                                }
+                            } else {
+                                Write-Output "User is already a member of group $groupName."
+                            }
+                        } else {
+                            Write-Output "Failed to find group $groupName for user with email $email."
+                        }
+                    }
+                }
+            } else {
+                # User doesn't exist, send invitation
                 $invitation = New-AzureADMSInvitation -InvitedUserEmailAddress $email -InviteRedirectUrl "https://myapps.microsoft.com" -SendInvitationMessage $false -InvitedUserDisplayName "$firstName $lastName" -InvitedUserType Guest
 
                 if ($invitation) {
                     Write-Output "Invitation sent to $email for $firstName $lastName."
-                    $userObjectId = $invitation.InvitedUser.Id
+
+                    # Wait for a moment before proceeding
+                    Start-Sleep -Seconds 5  # Adjust if necessary
+
+                    # Get the newly created user object
+                    $newUser = Get-AzureADUser -ObjectId $invitation.InvitedUser.Id
 
                     # Update user properties
                     $userParams = @{
                         GivenName = $firstName
                         Surname = $lastName
+                        CompanyName = $companyName
+                        City = $city
                     }
-
-                    Set-AzureADUser -ObjectId $userObjectId @userParams
+                    Set-AzureADUser -ObjectId $newUser.ObjectId @userParams
 
                     # Add user to the specified groups
                     for ($j = 1; $j -le 2; $j++) {
@@ -65,28 +119,23 @@ if ($tenantDetail) {
                         if (-not [string]::IsNullOrWhiteSpace($groupName)) {
                             $group = Get-AzureADGroup -Filter "DisplayName eq '$groupName'"
                             if ($group) {
-                                Add-AzureADGroupMember -ObjectId $group.ObjectId -RefObjectId $userObjectId
-                                Write-Output "User added to group $groupName."
+                                try {
+                                    Add-AzureADGroupMember -ObjectId $group.ObjectId -RefObjectId $newUser.ObjectId -ErrorAction Stop
+                                    Write-Output "User added to group $groupName."
+                                } catch {
+                                    Write-Output "Failed to add user to group $($groupName): $($_.Exception.Message)"
+                                }
                             } else {
-                                Write-Output "Failed to find group $groupName for user $firstName $lastName."
+                                Write-Output "Failed to find group $groupName for user with email $email."
                             }
                         }
                     }
                 } else {
                     Write-Output "Failed to send invitation to $email for $firstName $lastName."
                 }
-            } else {
-                Write-Output "Invalid email address provided for user $firstName $lastName."
             }
-        }
-        
-        # Output progress message
-        Write-Output "Batch $($i + 1) of $totalBatches processed."
-        
-        # Introduce wait time between batches
-        if ($i -lt ($totalBatches - 1)) {
-            Write-Output "Waiting for $waitTime seconds before processing next batch..."
-            Start-Sleep -Seconds $waitTime
+        } else {
+            Write-Output "Invalid email address provided for user $firstName $lastName."
         }
     }
 } else {
