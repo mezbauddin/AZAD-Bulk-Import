@@ -34,6 +34,7 @@ if ($tenantDetail) {
         $lastName = $user.'Last name'
         $companyName = $user.'Company Name'
         $city = $user.'City'
+        $department = $user.'Department'
 
         # Check if email is provided and is in a valid format
         if (-not ([string]::IsNullOrWhiteSpace($email)) -and $email -match '\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b') {
@@ -60,9 +61,13 @@ if ($tenantDetail) {
                     $existingUser.City = $city
                     $updateRequired = $true
                 }
+                if ($existingUser.Department -ne $department) {
+                    $existingUser.Department = $department
+                    $updateRequired = $true
+                }
                 if ($updateRequired) {
                     # Update user properties
-                    Set-AzureADUser -ObjectId $existingUser.ObjectId -GivenName $existingUser.GivenName -Surname $existingUser.Surname -CompanyName $existingUser.CompanyName -City $existingUser.City
+                    Set-AzureADUser -ObjectId $existingUser.ObjectId -GivenName $existingUser.GivenName -Surname $existingUser.Surname -CompanyName $existingUser.CompanyName -City $existingUser.City -Department $existingUser.Department
                     Write-Output "User properties updated for $email."
                 } else {
                     Write-Output "No updates found for user $email."
@@ -110,6 +115,7 @@ if ($tenantDetail) {
                         Surname = $lastName
                         CompanyName = $companyName
                         City = $city
+                        Department = $department
                     }
                     Set-AzureADUser -ObjectId $newUser.ObjectId @userParams
 

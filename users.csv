@@ -1,3 +1,4 @@
-Last Name,First Name,Email,Employee Type,Company Name,City,Group 1,Group 2
-Zul,Kawsar,zulkawsar@gmail.com,ACCT CLK,ABC Company,Orlando,TEST,
-Doe,Jane,mezbauddin@gmail.com,ACCT SR,XYZ Company,Orlando,,SalesAgents
+Last Name,First Name,Email,Employee Type,Company Name,City,Group 1,Group 2,Department
+Zul,Kawsar,zulkawsar@gmail.com,ACCT CLK,ABC Company,Orlando,TEST,,xtq
+Doe,Jane,mezbauddin@gmail.com,ACCT SR,XYZ Company,Orlando,,SalesAgents,qts
+Mez,ABC,mezbauddinabc@gmail.com,ACCT SR,XYZ Company,Orlando,,SalesAgents,dep-X
