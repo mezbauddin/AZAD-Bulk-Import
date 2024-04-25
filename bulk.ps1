@@ -10,6 +10,18 @@ Import-Module -Name AzureAD -Force
 # Connect to Azure AD
 Connect-AzureAD
 
+# Install Microsoft Graph PowerShell module
+if (-not (Get-Module -Name Microsoft.Graph -ErrorAction SilentlyContinue)) {
+    Write-Output "Microsoft Graph module is not installed. Installing..."
+    Install-Module -Name Microsoft.Graph -Scope CurrentUser -Force -AllowClobber
+}
+
+# Import Microsoft Graph module
+Import-Module -Name Microsoft.Graph -Force
+
+# Connect to Microsoft Graph
+Connect-MgGraph -Scopes Directory.ReadWrite.All
+
 # Get Azure AD tenant details
 $tenantDetail = Get-AzureADTenantDetail
 
@@ -66,13 +78,12 @@ if ($tenantDetail) {
                     $existingUser.Department = $department
                     $updateRequired = $true
                 }
-                if ($existingUser.EmployeeType -ne $employeeType) {
-                    $existingUser.EmployeeType = $employeeType
-                    $updateRequired = $true
-                }
                 if ($updateRequired) {
                     # Update user properties
-                    Set-AzureADUser -ObjectId $existingUser.ObjectId -GivenName $existingUser.GivenName -Surname $existingUser.Surname -CompanyName $existingUser.CompanyName -City $existingUser.City -Department $existingUser.Department -EmployeeType $existingUser.EmployeeType
+                    Set-AzureADUser -ObjectId $existingUser.ObjectId -GivenName $existingUser.GivenName -Surname $existingUser.Surname -CompanyName $existingUser.CompanyName -City $existingUser.City -Department $existingUser.Department
+                     # Update employee type using Microsoft Graph
+                    Update-MgUser -UserId $email -EmployeeType $employeeType
+                    Write-Output "Employee type updated for $email."
                     Write-Output "User properties updated for $email."
                 } else {
                     Write-Output "No updates found for user $email."
@@ -121,9 +132,12 @@ if ($tenantDetail) {
                         CompanyName = $companyName
                         City = $city
                         Department = $department
-                        EmployeeType = $employeeType
+                        # EmployeeType = $employeeType
                     }
                     Set-AzureADUser -ObjectId $newUser.ObjectId @userParams
+
+                    # Update employee type using Microsoft Graph
+                    Update-MgUser -UserId $email -EmployeeType $employeeType
 
                     # Add user to the specified groups
                     for ($j = 1; $j -le 2; $j++) {
