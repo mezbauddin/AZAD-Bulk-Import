@@ -17,7 +17,7 @@ if (-not (Get-Module -Name Microsoft.Graph -ErrorAction SilentlyContinue)) {
 }
 
 # Import Microsoft Graph module
-Import-Module -Name Microsoft.Graph -Force
+Import-Module -Name Microsoft.Graph
 
 # Connect to Microsoft Graph
 Connect-MgGraph -Scopes Directory.ReadWrite.All
@@ -81,8 +81,8 @@ if ($tenantDetail) {
                 if ($updateRequired) {
                     # Update user properties
                     Set-AzureADUser -ObjectId $existingUser.ObjectId -GivenName $existingUser.GivenName -Surname $existingUser.Surname -CompanyName $existingUser.CompanyName -City $existingUser.City -Department $existingUser.Department
-                     # Update employee type using Microsoft Graph
-                    Update-MgUser -UserId $email -EmployeeType $employeeType
+                    # Update employee type using Microsoft Graph
+                    Update-MgUser -UserId $existingUser.UserPrincipalName -EmployeeType $employeeType
                     Write-Output "Employee type updated for $email."
                     Write-Output "User properties updated for $email."
                 } else {
@@ -137,7 +137,8 @@ if ($tenantDetail) {
                     Set-AzureADUser -ObjectId $newUser.ObjectId @userParams
 
                     # Update employee type using Microsoft Graph
-                    Update-MgUser -UserId $email -EmployeeType $employeeType
+                    Update-MgUser -UserId $newUser.UserPrincipalName -EmployeeType $employeeType
+                    Write-Output "Employee type updated for $email."
 
                     # Add user to the specified groups
                     for ($j = 1; $j -le 2; $j++) {
