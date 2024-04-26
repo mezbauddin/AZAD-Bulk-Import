@@ -1,26 +1,34 @@
-﻿# Check if AzureAD module is installed, if not install it
-if (-not (Get-Module -Name AzureAD -ErrorAction SilentlyContinue)) {
-    Write-Output "AzureAD module is not installed. Installing..."
-    Install-Module -Name AzureAD -Scope CurrentUser -Force
+﻿# Function to check if a module is installed and import it if necessary
+function Import-ModuleIfNeeded {
+    param(
+        [string]$ModuleName
+    )
+    
+    if (-not (Get-Module -Name $ModuleName -ErrorAction SilentlyContinue)) {
+        Write-Output "$ModuleName module is not installed. Installing..."
+        Install-Module -Name $ModuleName -Scope CurrentUser -Force -AllowClobber
+    } elseif (-not (Get-Module -Name $ModuleName)) {
+        Import-Module -Name $ModuleName -Force
+    } else {
+        Write-Output "$ModuleName module is already imported."
+    }
 }
 
-# Import AzureAD module
-Import-Module -Name AzureAD -Force
+# Check if AzureAD module is installed, if not install it
+Import-ModuleIfNeeded -ModuleName "AzureAD"
 
 # Connect to Azure AD
 Connect-AzureAD
 
-# Install Microsoft Graph PowerShell module
-if (-not (Get-Module -Name Microsoft.Graph -ErrorAction SilentlyContinue)) {
-    Write-Output "Microsoft Graph module is not installed. Installing..."
-    Install-Module -Name Microsoft.Graph -Scope CurrentUser -Force -AllowClobber
-}
-
-# Import Microsoft Graph module
-Import-Module -Name Microsoft.Graph
+# Check if Microsoft Graph modules are installed, if not install them
+Import-ModuleIfNeeded -ModuleName "Microsoft.Graph"
+Import-ModuleIfNeeded -ModuleName "Microsoft.Graph.Users"
 
 # Connect to Microsoft Graph
 Connect-MgGraph -Scopes Directory.ReadWrite.All
+
+# Check if the connection to Microsoft Graph is successful
+Write-Output "Successfully connected to Microsoft Graph."
 
 # Get Azure AD tenant details
 $tenantDetail = Get-AzureADTenantDetail
@@ -102,10 +110,14 @@ if ($tenantDetail) {
                                     Add-AzureADGroupMember -ObjectId $group.ObjectId -RefObjectId $existingUser.ObjectId -ErrorAction Stop
                                     Write-Output "User added to group $groupName."
                                 } catch {
-                                    Write-Output "Failed to add user to group $($groupName): $($_.Exception.Message)"
+                                    if ($_.Exception.Message -match 'members') {
+                                        Write-Output "User is already a member of group $groupName. Skipping..."
+                                    } else {
+                                        Write-Output "Failed to add user to group $($groupName): $($_.Exception.Message)"
+                                    }
                                 }
                             } else {
-                                Write-Output "User is already a member of group $groupName."
+                                Write-Output "User is already a member of group $groupName. Skipping..."
                             }
                         } else {
                             Write-Output "Failed to find group $groupName for user with email $email."
@@ -150,7 +162,11 @@ if ($tenantDetail) {
                                     Add-AzureADGroupMember -ObjectId $group.ObjectId -RefObjectId $newUser.ObjectId -ErrorAction Stop
                                     Write-Output "User added to group $groupName."
                                 } catch {
-                                    Write-Output "Failed to add user to group $($groupName): $($_.Exception.Message)"
+                                    if ($_.Exception.Message -match 'members') {
+                                        Write-Output "User is already a member of group $groupName. Skipping..."
+                                    } else {
+                                        Write-Output "Failed to add user to group $($groupName): $($_.Exception.Message)"
+                                    }
                                 }
                             } else {
                                 Write-Output "Failed to find group $groupName for user with email $email."
