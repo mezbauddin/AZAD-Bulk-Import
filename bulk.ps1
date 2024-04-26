@@ -60,7 +60,7 @@ if ($tenantDetail) {
         # Check if email is provided and is in a valid format
         if (-not ([string]::IsNullOrWhiteSpace($email)) -and $email -match '\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b') {
             # Check if user already exists in Azure AD
-            $existingUser = Get-AzureADUser -Filter "UserPrincipalName eq '$email'"
+            $existingUser = Get-AzureADUser -Filter "Mail eq '$email'"
             if ($existingUser) {
                 Write-Output "User with email $email already exists in Azure AD. Checking for updates..."
 
@@ -89,14 +89,14 @@ if ($tenantDetail) {
                 if ($updateRequired) {
                     # Update user properties
                     Set-AzureADUser -ObjectId $existingUser.ObjectId -GivenName $existingUser.GivenName -Surname $existingUser.Surname -CompanyName $existingUser.CompanyName -City $existingUser.City -Department $existingUser.Department
-                    # Update employee type using Microsoft Graph
-                    Update-MgUser -UserId $existingUser.UserPrincipalName -EmployeeType $employeeType
-                    Write-Output "Employee type updated for $email."
+                    
                     Write-Output "User properties updated for $email."
                 } else {
                     Write-Output "No updates found for user $email."
                 }
-
+                # Update employee type using Microsoft Graph
+                Update-MgUser -UserId $existingUser.UserPrincipalName -EmployeeType $employeeType
+                Write-Output "Employee type updated for $email."
                 # Add user to the specified groups
                 for ($j = 1; $j -le 2; $j++) {
                     $groupName = $user."Group $j"
@@ -132,7 +132,8 @@ if ($tenantDetail) {
                     Write-Output "Invitation sent to $email for $firstName $lastName."
 
                     # Wait for a moment before proceeding
-                    Start-Sleep -Seconds 5  # Adjust if necessary
+                    # Start-Sleep -Seconds 10  # Adjust if necessary
+                   
 
                     # Get the newly created user object
                     $newUser = Get-AzureADUser -ObjectId $invitation.InvitedUser.Id
@@ -184,3 +185,6 @@ if ($tenantDetail) {
 } else {
     Write-Output "Failed to retrieve Azure AD tenant details."
 }
+
+# Disconnect from MgGraph
+# Disconnect-MgGraph
