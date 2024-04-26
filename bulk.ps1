@@ -1,26 +1,30 @@
-﻿# Check if AzureAD module is imported, if not import it
-if (-not (Get-Module -Name AzureAD -ListAvailable)) {
-    Write-Output "AzureAD module is not installed. Installing..."
-    Install-Module -Name AzureAD -Scope CurrentUser -Force
-} elseif (-not (Get-Module -Name AzureAD)) {
-    Import-Module -Name AzureAD -Force
-} else {
-    Write-Output "AzureAD module is already imported."
-}
-
+﻿$MaximumVariableCount = 20000
+$MaximumFunctionCount = 20000
+# Check if AzureAD module is imported, if not import it
+# if (-not (Get-Module -Name AzureAD -ListAvailable)) {
+#     Write-Output "AzureAD module is not installed. Installing..."
+#     Install-Module -Name AzureAD -Scope CurrentUser -Force
+# } elseif (-not (Get-Module -Name AzureAD)) {
+#     Import-Module -Name AzureAD -Force
+# } else {
+#     Write-Output "AzureAD module is already imported."
+# }
+Install-Module -Name AzureAD -Scope CurrentUser -Force
+Import-Module -Name AzureAD -Force
 # Connect to Azure AD
 Connect-AzureAD
 
 # Check if Microsoft Graph module is imported, if not import it
-if (-not (Get-Module -Name Microsoft.Graph -ListAvailable)) {
-    Write-Output "Microsoft Graph module is not installed. Installing..."
-    Install-Module -Name Microsoft.Graph -Scope CurrentUser -Force -AllowClobber
-} elseif (-not (Get-Module -Name Microsoft.Graph)) {
-    Import-Module -Name Microsoft.Graph -Force
-} else {
-    Write-Output "Microsoft Graph module is already imported."
-}
-
+# if (-not (Get-Module -Name Microsoft.Graph -ListAvailable)) {
+#     Write-Output "Microsoft Graph module is not installed. Installing..."
+#     Install-Module -Name Microsoft.Graph -Scope CurrentUser -Force -AllowClobber
+# } elseif (-not (Get-Module -Name Microsoft.Graph)) {
+#     Import-Module -Name Microsoft.Graph -Force
+# } else {
+#     Write-Output "Microsoft Graph module is already imported."
+# }
+Install-Module -Name Microsoft.Graph -Scope CurrentUser -Force -AllowClobber
+Import-Module -Name Microsoft.Graph -Force
 # Connect to Microsoft Graph
 Connect-MgGraph -Scopes Directory.ReadWrite.All
 
@@ -49,7 +53,7 @@ if ($tenantDetail) {
         $companyName = $user.'Company Name'
         $city = $user.'City'
         $department = $user.'Department'
-        $employeeType = $user.'Employee Type'
+        # $employeeType = $user.'Employee Type'
 
         # Check if email is provided and is in a valid format
         if (-not ([string]::IsNullOrWhiteSpace($email)) -and $email -match '\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b') {
@@ -85,7 +89,6 @@ if ($tenantDetail) {
                     Set-AzureADUser -ObjectId $existingUser.ObjectId -GivenName $existingUser.GivenName -Surname $existingUser.Surname -CompanyName $existingUser.CompanyName -City $existingUser.City -Department $existingUser.Department
                     # Update employee type using Microsoft Graph
                     Update-MgUser -UserId $existingUser.UserPrincipalName -EmployeeType $employeeType
-                    Write-Output "Employee type updated for $email."
                     Write-Output "User properties updated for $email."
                 } else {
                     Write-Output "No updates found for user $email."
@@ -122,7 +125,7 @@ if ($tenantDetail) {
                     Write-Output "Invitation sent to $email for $firstName $lastName."
 
                     # Wait for a moment before proceeding
-                    Start-Sleep -Seconds 5  # Adjust if necessary
+                    # Start-Sleep -Seconds 5  # Adjust if necessary
 
                     # Get the newly created user object
                     $newUser = Get-AzureADUser -ObjectId $invitation.InvitedUser.Id
@@ -137,7 +140,6 @@ if ($tenantDetail) {
                         # EmployeeType = $employeeType
                     }
                     Set-AzureADUser -ObjectId $newUser.ObjectId @userParams
-
                     # Update employee type using Microsoft Graph
                     Update-MgUser -UserId $newUser.UserPrincipalName -EmployeeType $employeeType
                     Write-Output "Employee type updated for $email."
