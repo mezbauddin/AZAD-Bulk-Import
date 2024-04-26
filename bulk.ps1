@@ -1,23 +1,25 @@
-﻿# Check if AzureAD module is installed, if not install it
-if (-not (Get-Module -Name AzureAD -ErrorAction SilentlyContinue)) {
+﻿# Check if AzureAD module is imported, if not import it
+if (-not (Get-Module -Name AzureAD -ListAvailable)) {
     Write-Output "AzureAD module is not installed. Installing..."
     Install-Module -Name AzureAD -Scope CurrentUser -Force
+} elseif (-not (Get-Module -Name AzureAD)) {
+    Import-Module -Name AzureAD -Force
+} else {
+    Write-Output "AzureAD module is already imported."
 }
-
-# Import AzureAD module
-Import-Module -Name AzureAD -Force
 
 # Connect to Azure AD
 Connect-AzureAD
 
-# Install Microsoft Graph PowerShell module
-if (-not (Get-Module -Name Microsoft.Graph -ErrorAction SilentlyContinue)) {
+# Check if Microsoft Graph module is imported, if not import it
+if (-not (Get-Module -Name Microsoft.Graph -ListAvailable)) {
     Write-Output "Microsoft Graph module is not installed. Installing..."
     Install-Module -Name Microsoft.Graph -Scope CurrentUser -Force -AllowClobber
+} elseif (-not (Get-Module -Name Microsoft.Graph)) {
+    Import-Module -Name Microsoft.Graph -Force
+} else {
+    Write-Output "Microsoft Graph module is already imported."
 }
-
-# Import Microsoft Graph module
-Import-Module -Name Microsoft.Graph
 
 # Connect to Microsoft Graph
 Connect-MgGraph -Scopes Directory.ReadWrite.All
