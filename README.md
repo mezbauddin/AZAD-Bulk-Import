@@ -25,6 +25,8 @@ Run the script using the following command:
 powershell
 Copy code
 .\bulk.ps1
+
+
 CSV File Format
 The CSV file should contain the following columns:
 
@@ -33,10 +35,10 @@ First name
 Last name
 Company Name
 City
-Department
 Employee Type
 Group 1
 Group 2
+Department
 Note: You can customize the column names and adjust the script accordingly.
 
 Contributing
