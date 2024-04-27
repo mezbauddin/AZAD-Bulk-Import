@@ -1,6 +1,6 @@
 # Bulk Import Users to Azure Active Directory
 
-# Important Note: This PowerShell script is written based on PowerShell version 5.1 and may not work with version 7.
+# Important Note: This PowerShell script is written based on PowerShell version 5.1 and may not work with version 7. Additionally, it will not run on x86 architecture due to dependencies on certain modules and APIs that require 64-bit architecture.
 
 This PowerShell script enables bulk import of users into Azure Active Directory (Azure AD) and updates their properties using a CSV file. It utilizes the AzureAD and Microsoft.Graph PowerShell modules to interact with Azure AD and Microsoft Graph API.
 
