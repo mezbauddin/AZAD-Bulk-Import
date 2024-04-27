@@ -1,6 +1,6 @@
 # Install AzureAD & Microsoft.Graph modules
-Install-Module -Name "AzureAD" -Force -AllowClobber -SkipPublisherCheck
-Install-Module -Name "Microsoft.Graph" -Force -AllowClobber -SkipPublisherCheck
+# Install-Module -Name "AzureAD" -Force -AllowClobber -SkipPublisherCheck
+# Install-Module -Name "Microsoft.Graph" -Force -AllowClobber -SkipPublisherCheck
 
 # Import AzureAD module & Microsoft.Graph module
 Import-Module -Name "AzureAD" -Force
@@ -109,13 +109,9 @@ if ($tenantDetail) {
                     CompanyName = $companyName
                     City = $city
                     Department = $department
-                    # EmployeeType = $employeeType
+                    EmployeeType = $employeeType  # Update EmployeeType
                 }
                 Set-AzureADUser -ObjectId $newUser.ObjectId @userParams
-
-                # Update employee type using Microsoft Graph
-                Update-MgUser -UserId $newUser.UserPrincipalName -EmployeeType $employeeType
-                Write-Output "Employee type updated for $email."
 
                 # Add user to the specified groups
                 for ($j = 1; $j -le 2; $j++) {
