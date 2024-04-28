@@ -1,4 +1,4 @@
-# Function to check if a module is installed and import it if necessary
+﻿# Function to check if a module is installed and import it if necessary
 function Import-ModuleIfNeeded {
     param(
         [string]$ModuleName
@@ -17,15 +17,15 @@ function Import-ModuleIfNeeded {
 # Check if AzureAD module is installed, if not install it
 Import-ModuleIfNeeded -ModuleName "AzureAD"
 
+# Check if Microsoft.Graph.Users module is installed, if not install it
+Import-ModuleIfNeeded -ModuleName "Microsoft.Graph.Users"
+
 # Connect to Azure AD
 Connect-AzureAD
 
-# Check if Microsoft Graph modules are installed, if not install them
-Import-ModuleIfNeeded -ModuleName "Microsoft.Graph"
-Import-ModuleIfNeeded -ModuleName "Microsoft.Graph.Users"
-
 # Connect to Microsoft Graph
 Connect-MgGraph -Scopes Directory.ReadWrite.All
+
 
 # Check if the connection to Microsoft Graph is successful
 Write-Output "Successfully connected to Microsoft Graph."
@@ -148,7 +148,7 @@ if ($tenantDetail) {
                         # EmployeeType = $employeeType
                     }
                     Set-AzureADUser -ObjectId $newUser.ObjectId @userParams
-
+                    
                     # Update employee type using Microsoft Graph
                     Update-MgUser -UserId $newUser.UserPrincipalName -EmployeeType $employeeType
                     Write-Output "Employee type updated for $email."
