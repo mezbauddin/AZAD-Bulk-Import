@@ -7,8 +7,10 @@ function Import-ModuleIfNeeded {
     if (-not (Get-Module -Name $ModuleName -ErrorAction SilentlyContinue)) {
         Write-Output "$ModuleName module is not installed. Installing..."
         Install-Module -Name $ModuleName -Scope CurrentUser -Force -AllowClobber
+        Start-Sleep -Seconds 5
     } elseif (-not (Get-Module -Name $ModuleName)) {
         Import-Module -Name $ModuleName -Force
+        Start-Sleep -Seconds 5
     } else {
         Write-Output "$ModuleName module is already imported."
     }
