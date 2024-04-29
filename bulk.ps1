@@ -187,4 +187,5 @@ if ($tenantDetail) {
 }
 
 # Disconnect from MgGraph
-# Disconnect-MgGraph
+Disconnect-MgGraph
+Disconnect-AzureAD
