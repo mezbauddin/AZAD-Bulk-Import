@@ -93,12 +93,14 @@ if ($tenantDetail) {
                     Set-AzureADUser -ObjectId $existingUser.ObjectId -GivenName $existingUser.GivenName -Surname $existingUser.Surname -CompanyName $existingUser.CompanyName -City $existingUser.City -Department $existingUser.Department
                     
                     Write-Output "User properties updated for $email."
+                    Start-Sleep -Seconds 5  # Wait before next operation
                 } else {
                     Write-Output "No updates found for user $email."
                 }
                 # Update employee type using Microsoft Graph
                 Update-MgUser -UserId $existingUser.UserPrincipalName -EmployeeType $employeeType
                 Write-Output "Employee type updated for $email."
+                Start-Sleep -Seconds 5  # Wait before next operation
                 # Add user to the specified groups
                 for ($j = 1; $j -le 2; $j++) {
                     $groupName = $user."Group $j"
@@ -111,6 +113,7 @@ if ($tenantDetail) {
                                 try {
                                     Add-AzureADGroupMember -ObjectId $group.ObjectId -RefObjectId $existingUser.ObjectId -ErrorAction Stop
                                     Write-Output "User added to group $groupName."
+                                    Start-Sleep -Seconds 5  # Wait before next operation
                                 } catch {
                                     if ($_.Exception.Message -match 'members') {
                                         Write-Output "User is already a member of group $groupName. Skipping..."
@@ -134,47 +137,57 @@ if ($tenantDetail) {
                     Write-Output "Invitation sent to $email for $firstName $lastName."
 
                     # Wait for a moment before proceeding
-                    # Start-Sleep -Seconds 10  # Adjust if necessary
+                    Start-Sleep -Seconds 10  # Adjust if necessary
                    
 
                     # Get the newly created user object
                     $newUser = Get-AzureADUser -ObjectId $invitation.InvitedUser.Id
 
-                    # Update user properties
-                    $userParams = @{
-                        GivenName = $firstName
-                        Surname = $lastName
-                        CompanyName = $companyName
-                        City = $city
-                        Department = $department
-                        # EmployeeType = $employeeType
-                    }
-                    Set-AzureADUser -ObjectId $newUser.ObjectId @userParams
-                    
-                    # Update employee type using Microsoft Graph
-                    Update-MgUser -UserId $newUser.UserPrincipalName -EmployeeType $employeeType
-                    Write-Output "Employee type updated for $email."
+                    # Check if the user object was retrieved successfully
+                    if ($newUser) {
+                        # Update user properties
+                        $userParams = @{
+                            GivenName = $firstName
+                            Surname = $lastName
+                            CompanyName = $companyName
+                            City = $city
+                            Department = $department
+                            # EmployeeType = $employeeType
+                        }
+                        Set-AzureADUser -ObjectId $newUser.ObjectId @userParams
+                        
+                        Start-Sleep -Seconds 5  # Adjust if necessary
 
-                    # Add user to the specified groups
-                    for ($j = 1; $j -le 2; $j++) {
-                        $groupName = $user."Group $j"
-                        if (-not [string]::IsNullOrWhiteSpace($groupName)) {
-                            $group = Get-AzureADGroup -Filter "DisplayName eq '$groupName'"
-                            if ($group) {
-                                try {
-                                    Add-AzureADGroupMember -ObjectId $group.ObjectId -RefObjectId $newUser.ObjectId -ErrorAction Stop
-                                    Write-Output "User added to group $groupName."
-                                } catch {
-                                    if ($_.Exception.Message -match 'members') {
-                                        Write-Output "User is already a member of group $groupName. Skipping..."
-                                    } else {
-                                        Write-Output "Failed to add user to group $($groupName): $($_.Exception.Message)"
+                        $checkUser = Get-AzureADUser -Filter "UserPrincipalName eq '$($newUser.UserPrincipalName)'"
+                        if ($checkuser) {
+                            Update-MgUser -UserId $checkuser.UserPrincipalName -EmployeeType $employeeType
+                            Write-Output "User Employee type updated $email."
+                        }
+                        
+                        # Add user to the specified groups
+                        for ($j = 1; $j -le 2; $j++) {
+                            $groupName = $user."Group $j"
+                            if (-not [string]::IsNullOrWhiteSpace($groupName)) {
+                                $group = Get-AzureADGroup -Filter "DisplayName eq '$groupName'"
+                                if ($group) {
+                                    try {
+                                        Add-AzureADGroupMember -ObjectId $group.ObjectId -RefObjectId $newUser.ObjectId -ErrorAction Stop
+                                        Write-Output "User added to group $groupName."
+                                        Start-Sleep -Seconds 5  # Wait before next operation
+                                    } catch {
+                                        if ($_.Exception.Message -match 'members') {
+                                            Write-Output "User is already a member of group $groupName. Skipping..."
+                                        } else {
+                                            Write-Output "Failed to add user to group $($groupName): $($_.Exception.Message)"
+                                        }
                                     }
+                                } else {
+                                    Write-Output "Failed to find group $groupName for user with email $email."
                                 }
-                            } else {
-                                Write-Output "Failed to find group $groupName for user with email $email."
                             }
                         }
+                    } else {
+                        Write-Output "Failed to retrieve newly created user object for $email."
                     }
                 } else {
                     Write-Output "Failed to send invitation to $email for $firstName $lastName."
@@ -189,5 +202,5 @@ if ($tenantDetail) {
 }
 
 # Disconnect from MgGraph
-Disconnect-MgGraph
-Disconnect-AzureAD
+# Disconnect-MgGraph
+# Disconnect-AzureAD
