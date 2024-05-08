@@ -7,10 +7,8 @@ function Import-ModuleIfNeeded {
     if (-not (Get-Module -Name $ModuleName -ErrorAction SilentlyContinue)) {
         Write-Output "$ModuleName module is not installed. Installing..."
         Install-Module -Name $ModuleName -Scope CurrentUser -Force -AllowClobber
-        Start-Sleep -Seconds 5
     } elseif (-not (Get-Module -Name $ModuleName)) {
         Import-Module -Name $ModuleName -Force
-        Start-Sleep -Seconds 5
     } else {
         Write-Output "$ModuleName module is already imported."
     }
@@ -22,14 +20,25 @@ function Remove-AzureADUser {
         [string]$EmailAddress
     )
 
-    $existingUser = Get-AzureADUser -Filter "Mail eq '$EmailAddress'"
-    if ($existingUser) {
-        Remove-AzureADUser -ObjectId $existingUser.ObjectId
-        Write-Output "User with email $EmailAddress has been successfully removed from Azure AD."
-    } else {
-        Write-Output "User with email $EmailAddress does not exist in Azure AD."
+    try {
+        # Debugging output to verify email address
+        Write-Output "Attempting to remove user with email: $EmailAddress"
+
+        # Get the user by filtering on their email address
+        $existingUser = Get-AzureADUser -Filter "Mail eq '$EmailAddress'"
+
+        if ($existingUser) {
+            # Remove the user
+            Remove-AzureADUser -ObjectId $existingUser.ObjectId
+            Write-Output "User with email $EmailAddress has been successfully removed from Azure AD."
+        } else {
+            Write-Output "User with email $EmailAddress does not exist in Azure AD."
+        }
+    } catch {
+        Write-Output "Error: $_"
     }
 }
+
 
 # Check if AzureAD module is installed, if not install it
 Import-ModuleIfNeeded -ModuleName "AzureAD"
