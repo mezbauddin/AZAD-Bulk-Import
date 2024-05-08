@@ -156,7 +156,7 @@ if ($tenantDetail) {
                         }
                         Set-AzureADUser -ObjectId $newUser.ObjectId @userParams
                         
-                        Start-Sleep -Seconds 5  # Adjust if necessary
+                        Start-Sleep -Seconds 15  # Adjust if necessary
 
                         $checkUser = Get-AzureADUser -Filter "UserPrincipalName eq '$($newUser.UserPrincipalName)'"
                         if ($checkuser) {
